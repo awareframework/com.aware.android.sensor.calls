@@ -15,6 +15,7 @@ import android.telephony.PhoneStateListener
 import android.telephony.PhoneStateListener.LISTEN_CALL_STATE
 import android.telephony.PhoneStateListener.LISTEN_NONE
 import android.telephony.TelephonyManager
+import android.telephony.TelephonyManager.*
 import android.util.Log
 import com.awareframework.android.core.AwareSensor
 import com.awareframework.android.core.model.SensorConfig
@@ -113,7 +114,28 @@ class CallsSensor : AwareSensor() {
         override fun onCallStateChanged(state: Int, incomingNumber: String?) {
             super.onCallStateChanged(state, incomingNumber)
 
-            TODO("Implement here")
+            when (state) {
+                CALL_STATE_RINGING -> {
+                    logd(ACTION_AWARE_CALL_RINGING)
+
+                    sendBroadcast(Intent(ACTION_AWARE_CALL_RINGING))
+                    CONFIG.sensorObserver?.onRinging(incomingNumber)
+                }
+
+                CALL_STATE_OFFHOOK -> {
+                    logd(ACTION_AWARE_USER_IN_CALL)
+
+                    sendBroadcast(Intent(ACTION_AWARE_USER_IN_CALL))
+                    CONFIG.sensorObserver?.onBusy(incomingNumber)
+                }
+
+                CALL_STATE_IDLE -> {
+                    logd(ACTION_AWARE_USER_NOT_IN_CALL)
+
+                    sendBroadcast(Intent(ACTION_AWARE_USER_NOT_IN_CALL))
+                    CONFIG.sensorObserver?.onFree(incomingNumber)
+                }
+            }
         }
     }
 
@@ -210,21 +232,21 @@ class CallsSensor : AwareSensor() {
          *
          * @param number
          */
-        fun onRinging(number: String)
+        fun onRinging(number: String?)
 
         /**
          * Callback when the user answered and is busy with a call
          *
          * @param number
          */
-        fun onBusy(number: String)
+        fun onBusy(number: String?)
 
         /**
          * Callback when the user hangup an ongoing call and is now free
          *
          * @param number
          */
-        fun onFree(number: String)
+        fun onFree(number: String?)
     }
 
     class CallsSensorBroadcastReceiver : AwareSensor.SensorBroadcastReceiver() {
