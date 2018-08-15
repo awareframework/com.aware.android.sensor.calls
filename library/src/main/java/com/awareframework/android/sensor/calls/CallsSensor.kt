@@ -1,15 +1,18 @@
 package com.awareframework.android.sensor.calls
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager.PERMISSION_GRANTED
 import android.database.ContentObserver
+import android.database.Cursor
 import android.os.Handler
 import android.os.IBinder
 import android.provider.CallLog
+import android.provider.CallLog.Calls.*
 import android.support.v4.content.ContextCompat
 import android.telephony.PhoneStateListener
 import android.telephony.PhoneStateListener.LISTEN_CALL_STATE
@@ -19,6 +22,7 @@ import android.telephony.TelephonyManager.*
 import android.util.Log
 import com.awareframework.android.core.AwareSensor
 import com.awareframework.android.core.model.SensorConfig
+import com.awareframework.android.sensor.calls.model.CallData
 
 
 /**
@@ -62,16 +66,6 @@ class CallsSensor : AwareSensor() {
          */
         const val ACTION_AWARE_USER_NOT_IN_CALL = "ACTION_AWARE_USER_NOT_IN_CALL"
 
-        /**
-         * Fired event: message received
-         */
-        const val ACTION_AWARE_MESSAGE_RECEIVED = "ACTION_AWARE_MESSAGE_RECEIVED"
-
-        /**
-         * Fired event: message sent
-         */
-        const val ACTION_AWARE_MESSAGE_SENT = "ACTION_AWARE_MESSAGE_SENT"
-
         const val ACTION_AWARE_CALLS_START = "com.awareframework.android.sensor.calls.SENSOR_START"
         const val ACTION_AWARE_CALLS_STOP = "com.awareframework.android.sensor.calls.SENSOR_STOP"
 
@@ -103,10 +97,61 @@ class CallsSensor : AwareSensor() {
 
     private val callsHandler = Handler()
     private val callsObserver = object : ContentObserver(callsHandler) {
+
+        @SuppressLint("MissingPermission")
         override fun onChange(selfChange: Boolean) {
             super.onChange(selfChange)
 
-            TODO("Implement here")
+            val lastCall: Cursor? = contentResolver.query(CallLog.Calls.CONTENT_URI, null, null, null, CallLog.Calls.DATE + " DESC LIMIT 1")
+
+
+            if (lastCall?.moveToFirst() == true) {
+                val lcType = lastCall.getInt(lastCall.getColumnIndex(CallLog.Calls.TYPE))
+                val lcTimestamp = lastCall.getLong(lastCall.getColumnIndex(CallLog.Calls.DATE))
+                val lcDuration = lastCall.getInt(lastCall.getColumnIndex(CallLog.Calls.DURATION))
+                val lcTrace = lastCall.getString(lastCall.getColumnIndex(CallLog.Calls.NUMBER))
+
+                if (!lastCall.isClosed)
+                    lastCall.close()
+
+                // TODO add check if the call exists in the db
+
+                val data = CallData().apply {
+                    timestamp = System.currentTimeMillis()
+                    deviceId = CONFIG.deviceId
+                    label = CONFIG.label
+
+                    eventTimestamp = lcTimestamp
+                    duration = lcDuration
+                    trace = lcTrace // TODO encrypt data
+                    type = lcType
+                }
+
+                dbEngine?.save(data, CallData.TABLE_NAME)
+
+                when (lcType) {
+                    INCOMING_TYPE -> {
+                        logd(ACTION_AWARE_CALL_ACCEPTED)
+
+                        CONFIG.sensorObserver?.onCall(data)
+                        sendBroadcast(Intent(ACTION_AWARE_CALL_ACCEPTED))
+                    }
+
+                    MISSED_TYPE -> {
+                        logd(ACTION_AWARE_CALL_MISSED)
+
+                        CONFIG.sensorObserver?.onCall(data)
+                        sendBroadcast(Intent(ACTION_AWARE_CALL_MISSED))
+                    }
+
+                    OUTGOING_TYPE -> {
+                        logd(ACTION_AWARE_CALL_MADE)
+
+                        CONFIG.sensorObserver?.onCall(data)
+                        sendBroadcast(Intent(ACTION_AWARE_CALL_MADE))
+                    }
+                }
+            }
         }
     }
 
@@ -201,7 +246,7 @@ class CallsSensor : AwareSensor() {
     }
 
     override fun onSync(intent: Intent?) {
-        TODO("Implement here")
+        dbEngine?.startSync(CallData.TABLE_NAME)
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -225,7 +270,7 @@ class CallsSensor : AwareSensor() {
          *
          * @param data
          */
-        fun onCall(data: ContentValues)
+        fun onCall(data: CallData)
 
         /**
          * Callback when the phone is ringing
