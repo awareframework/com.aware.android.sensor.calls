@@ -1,0 +1,20 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.awareframework.android.sensor.calls">
+
+    <application>
+        <service
+            android:name=".CallsSensor"
+            android:exported="true" />
+
+        <receiver
+            android:name=".CallsSensor$CallsSensorBroadcastReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.aware.android.sensor.calls.SENSOR_START" />
+                <action android:name="com.aware.android.sensor.calls.SENSOR_STOP" />
+                <action android:name="com.aware.android.sensor.SENSOR_START" />
+                <action android:name="com.aware.android.sensor.SENSOR_STOP" />
+            </intent-filter>
+        </receiver>
+    </application>
+</manifest>
