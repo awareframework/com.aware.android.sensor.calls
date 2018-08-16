@@ -9,6 +9,7 @@ import android.content.IntentFilter
 import android.content.pm.PackageManager.PERMISSION_GRANTED
 import android.database.ContentObserver
 import android.database.Cursor
+import android.os.Build
 import android.os.Handler
 import android.os.IBinder
 import android.provider.CallLog
@@ -52,6 +53,24 @@ class CallsSensor : AwareSensor() {
         const val ACTION_AWARE_CALL_MISSED = "ACTION_AWARE_CALL_MISSED"
 
         /**
+         * Fired event: call got voice mailed.
+         * Only available after SDK 21
+         */
+        const val ACTION_AWARE_CALL_VOICE_MAILED = "ACTION_AWARE_CALL_VOICE_MAILED"
+
+        /**
+         * Fired event: call got rejected by the callee
+         * Only available after SDK 24
+         */
+        const val ACTION_AWARE_CALL_REJECTED = "ACTION_AWARE_CALL_REJECTED"
+
+        /**
+         * Fired event: call got blocked.
+         * Only available after SDK 24
+         */
+        const val ACTION_AWARE_CALL_BLOCKED = "ACTION_AWARE_CALL_BLOCKED"
+
+        /**
          * Fired event: call attempt by the user
          */
         const val ACTION_AWARE_CALL_MADE = "ACTION_AWARE_CALL_MADE"
@@ -93,6 +112,23 @@ class CallsSensor : AwareSensor() {
         }
     }
 
+    private val callTypeToActionMap = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+        mapOf(
+                INCOMING_TYPE to ACTION_AWARE_CALL_ACCEPTED,
+                MISSED_TYPE to ACTION_AWARE_CALL_MISSED,
+                OUTGOING_TYPE to ACTION_AWARE_CALL_MADE,
+                VOICEMAIL_TYPE to ACTION_AWARE_CALL_VOICE_MAILED,
+                REJECTED_TYPE to ACTION_AWARE_CALL_REJECTED,
+                BLOCKED_TYPE to ACTION_AWARE_CALL_BLOCKED
+        )
+    } else {
+        mapOf(
+                INCOMING_TYPE to ACTION_AWARE_CALL_ACCEPTED,
+                MISSED_TYPE to ACTION_AWARE_CALL_MISSED,
+                OUTGOING_TYPE to ACTION_AWARE_CALL_MADE
+        )
+    }
+
     private lateinit var telephonyManager: TelephonyManager
 
     private val callsHandler = Handler()
@@ -129,27 +165,13 @@ class CallsSensor : AwareSensor() {
 
                 dbEngine?.save(data, CallData.TABLE_NAME)
 
-                when (lcType) {
-                    INCOMING_TYPE -> {
-                        logd(ACTION_AWARE_CALL_ACCEPTED)
+                CONFIG.sensorObserver?.onCall(data)
 
-                        CONFIG.sensorObserver?.onCall(data)
-                        sendBroadcast(Intent(ACTION_AWARE_CALL_ACCEPTED))
-                    }
+                val action = callTypeToActionMap[lcType]
 
-                    MISSED_TYPE -> {
-                        logd(ACTION_AWARE_CALL_MISSED)
-
-                        CONFIG.sensorObserver?.onCall(data)
-                        sendBroadcast(Intent(ACTION_AWARE_CALL_MISSED))
-                    }
-
-                    OUTGOING_TYPE -> {
-                        logd(ACTION_AWARE_CALL_MADE)
-
-                        CONFIG.sensorObserver?.onCall(data)
-                        sendBroadcast(Intent(ACTION_AWARE_CALL_MADE))
-                    }
+                if (action != null) {
+                    logd(action)
+                    sendBroadcast(Intent(action))
                 }
             }
         }
