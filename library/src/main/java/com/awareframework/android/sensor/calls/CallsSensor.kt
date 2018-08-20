@@ -27,7 +27,7 @@ import com.awareframework.android.sensor.calls.model.CallData
 
 
 /**
- * Calls Module. For now, scans and returns surrounding calls devices and RSSI dB values.
+ * Logs the call events of the user.
  *
  * @author  sercant
  * @date 14/08/2018
