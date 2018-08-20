@@ -35,7 +35,7 @@ import com.awareframework.android.sensor.calls.model.CallData
 class CallsSensor : AwareSensor() {
 
     companion object {
-        const val TAG = "AWARECallsSensor"
+        const val TAG = "AWARE::Calls"
 
         /**
          * Fired event: call accepted by the user
