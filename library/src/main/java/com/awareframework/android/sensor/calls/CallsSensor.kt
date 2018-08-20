@@ -93,7 +93,7 @@ class CallsSensor : AwareSensor() {
 
         const val ACTION_AWARE_CALLS_SYNC = "com.awareframework.android.sensor.calls.SENSOR_SYNC"
 
-        val CONFIG = CallsConfig()
+        val CONFIG = Config()
 
         val REQUIRED_PERMISSIONS = arrayOf(
                 Manifest.permission.READ_CONTACTS,
@@ -101,13 +101,13 @@ class CallsSensor : AwareSensor() {
                 Manifest.permission.READ_CALL_LOG
         )
 
-        fun startService(context: Context, config: CallsConfig? = null) {
+        fun start(context: Context, config: Config? = null) {
             if (config != null)
                 CONFIG.replaceWith(config)
             context.startService(Intent(context, CallsSensor::class.java))
         }
 
-        fun stopService(context: Context) {
+        fun stop(context: Context) {
             context.stopService(Intent(context, CallsSensor::class.java))
         }
     }
@@ -273,20 +273,20 @@ class CallsSensor : AwareSensor() {
 
     override fun onBind(intent: Intent?): IBinder? = null
 
-    data class CallsConfig(
-            var sensorObserver: SensorObserver? = null
+    data class Config(
+            var sensorObserver: Observer? = null
     ) : SensorConfig(dbPath = "aware_calls") {
 
         override fun <T : SensorConfig> replaceWith(config: T) {
             super.replaceWith(config)
 
-            if (config is CallsConfig) {
+            if (config is Config) {
                 sensorObserver = config.sensorObserver
             }
         }
     }
 
-    interface SensorObserver {
+    interface Observer {
         /**
          * Callback when a call event is recorded (received, made, missed)
          *
@@ -328,18 +328,18 @@ class CallsSensor : AwareSensor() {
                     logd("Sensor enabled: " + CONFIG.enabled)
 
                     if (CONFIG.enabled) {
-                        startService(context)
+                        start(context)
                     }
                 }
 
                 ACTION_AWARE_CALLS_STOP,
                 SENSOR_STOP_ALL -> {
                     logd("Stopping sensor.")
-                    stopService(context)
+                    stop(context)
                 }
 
                 ACTION_AWARE_CALLS_START -> {
-                    startService(context)
+                    start(context)
                 }
             }
         }

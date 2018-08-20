@@ -19,8 +19,8 @@ class ExampleInstrumentedTest {
         // Context of the app under test.
         val appContext = InstrumentationRegistry.getTargetContext()
 
-        CallsSensor.startService(appContext, CallsSensor.CallsConfig().apply {
-            sensorObserver = object : CallsSensor.SensorObserver {
+        CallsSensor.start(appContext, CallsSensor.Config().apply {
+            sensorObserver = object : CallsSensor.Observer {
                 override fun onCall(data: CallData) {
                     // your code here...
                 }
